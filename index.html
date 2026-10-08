@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0807">
+<meta name="robots" content="noindex,nofollow">
+<title>MICHAEL.EXE</title>
+<style>
+:root{
+  --bg:#0a0807; --char:#151211; --brown:#2b1e17; --brown-hi:#6b4a35;
+  --burg:#7a1830; --burg-hi:#a82a4d; --off:#ece4d8; --mute:#8d807a;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Courier New",monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);overflow-x:hidden}
+body{min-height:100vh;min-height:100dvh;background:var(--bg);color:var(--off);font-family:var(--mono);font-size:15px;line-height:1.6;overflow-x:hidden;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+/* faint scanlines: the only CRT detail */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--burg-hi);outline-offset:3px}
+
+.view{display:none;min-height:100vh;min-height:100dvh;opacity:0;transition:opacity .45s ease}
+.view.active{display:flex;flex-direction:column}
+.view.show{opacity:1}
+
+/* ---------- title bar (inside files) ---------- */
+.titlebar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px 14px;
+  background:rgba(10,8,7,.92);border-bottom:1px solid var(--brown);backdrop-filter:blur(6px)}
+.back{min-height:44px;min-width:44px;padding:0 14px;border:1px solid var(--burg);color:var(--off);letter-spacing:.06em;transition:background .2s}
+.back:hover{background:var(--burg)}
+.fname{color:var(--mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.log{color:var(--mute);min-height:1.6em}
+.cursor::after{content:"";display:inline-block;width:.55em;height:1.05em;margin-left:3px;vertical-align:-.15em;background:var(--burg-hi);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.fade-in{animation:fadeIn .8s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ---------- boot ---------- */
+#v-boot{justify-content:center;align-items:center;text-align:center;padding:24px}
+#boot-out{min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.boot-title{font-size:clamp(34px,10vw,64px);letter-spacing:.08em;color:var(--off);font-weight:600}
+.boot-title b{color:var(--burg-hi);font-weight:600}
+.boot-sub{letter-spacing:.35em;color:var(--mute);font-size:13px}
+.ok{color:var(--burg-hi);letter-spacing:.2em}
+.btn{margin-top:34px;min-height:54px;padding:0 30px;border:1px solid var(--burg-hi);letter-spacing:.2em;color:var(--off);
+  background:linear-gradient(var(--burg),var(--burg));background-size:0% 100%;background-repeat:no-repeat;transition:background-size .35s ease,box-shadow .35s}
+.btn:hover,.btn:active{background-size:100% 100%;box-shadow:0 0 28px rgba(122,24,48,.5)}
+
+/* ---------- archive ---------- */
+#v-archive{padding:48px 20px 40px;align-items:center}
+.arch-head{text-align:center;margin-bottom:38px}
+.arch-head h1{font-size:clamp(26px,7vw,40px);letter-spacing:.1em;font-weight:600}
+.arch-head h1 b{color:var(--burg-hi);font-weight:600}
+.arch-head p.ed{font-family:var(--serif);font-style:italic;color:var(--mute);font-size:17px;margin-top:2px}
+.sys{display:inline-block;text-align:left;margin-top:22px;font-size:13px;color:var(--mute);border-left:2px solid var(--burg);padding-left:12px}
+.sys span{color:var(--off)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;width:100%;max-width:640px}
+.file{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:14px;text-align:center;
+  padding:22px 10px 16px;min-height:178px;background:var(--char);border:1px solid var(--brown);
+  transition:transform .25s ease,border-color .25s,box-shadow .25s}
+.file:hover,.file:focus-visible{transform:translateY(-4px);border-color:var(--burg-hi);box-shadow:0 10px 30px rgba(122,24,48,.28)}
+.file:active{transform:scale(.97)}
+.file svg{width:62px;height:62px;overflow:visible}
+.file .n{font-size:12px;line-height:1.4;word-break:break-word;color:var(--off)}
+.grid.enter .file{animation:fadeIn .7s ease both}
+.grid.enter .file:nth-child(2){animation-delay:.12s}.grid.enter .file:nth-child(3){animation-delay:.24s}.grid.enter .file:nth-child(4){animation-delay:.36s}
+@media(max-width:340px){.grid{grid-template-columns:1fr}}
+
+/* ---------- file 01 : box ---------- */
+.pane{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 22px 60px;width:100%;max-width:560px;margin:0 auto}
+.bar{width:100%;max-width:320px;height:6px;border:1px solid var(--brown);margin-top:14px}
+.bar i{display:block;height:100%;width:0;background:var(--burg-hi);transition:width 1.3s cubic-bezier(.6,0,.3,1)}
+.frame{position:relative;width:100%;max-width:380px;padding:12px;background:var(--char);border:1px solid var(--burg);margin-top:30px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.frame::before,.frame::after{content:"";position:absolute;width:16px;height:16px;border:2px solid var(--burg-hi)}
+.frame::before{top:-6px;left:-6px;border-right:0;border-bottom:0}
+.frame::after{bottom:-6px;right:-6px;border-left:0;border-top:0}
+.frame img{display:block;width:100%;height:auto;max-height:70vh;object-fit:cover}
+.ph{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;border:1px dashed var(--brown-hi);color:var(--mute);letter-spacing:.18em;font-size:13px;text-align:center;padding:10px}
+.found{font-family:var(--serif);font-style:italic;font-size:24px;margin-top:26px;text-align:center}
+.hidden{display:none}
+
+/* ---------- file 02 : slash ---------- */
+#v-slash{background:#000}
+#v-slash .pane{justify-content:flex-start;align-items:flex-start;max-width:640px}
+.meow{font-size:clamp(22px,6vw,30px);color:var(--off)}
+
+/* ---------- file 03 : list ---------- */
+.list{list-style:none;width:100%;margin-top:6px}
+.list li{display:grid;grid-template-columns:3.2ch 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--brown);opacity:0;transform:translateY(10px);transition:opacity .6s ease,transform .6s ease}
+.list li.in{opacity:1;transform:none}
+.list .num{color:var(--burg-hi);font-size:14px;padding-top:4px}
+.list .txt{font-family:var(--serif);font-size:19px;line-height:1.55}
+.tail{margin-top:46px;text-align:center;color:var(--mute);letter-spacing:.14em;font-size:13px}
+
+/* ---------- file 04 : final ---------- */
+#v-final{background:radial-gradient(120% 70% at 50% 100%,#2a0d16 0%,var(--bg) 62%)}
+#v-final .pane{max-width:600px}
+.letter p{font-family:var(--serif);font-size:clamp(19px,5vw,22px);line-height:1.8;margin-bottom:1.3em;opacity:0;transform:translateY(8px);transition:opacity 1s ease,transform 1s ease}
+.letter p.in{opacity:1;transform:none}
+.sign{margin-top:36px;font-family:var(--serif);font-style:italic;font-size:clamp(24px,7vw,32px);color:var(--off);opacity:0;transition:opacity 1.2s ease}
+.sign.in{opacity:1}
+.close{margin-top:14px;font-family:var(--serif);color:var(--mute);font-size:19px;opacity:0;transition:opacity 1.2s ease}
+.close.in{opacity:1}
+
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.list li,.letter p,.sign,.close{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- ========== BOOT ========== -->
+<main class="view" id="v-boot">
+  <div id="boot-out"></div>
+  <button class="btn hidden" id="enter">[ ENTER SYSTEM ]</button>
+</main>
+
+<!-- ========== ARCHIVE ========== -->
+<main class="view" id="v-archive">
+  <header class="arch-head">
+    <h1>MICHAEL<b>.EXE</b></h1>
+    <p class="ed">Birthday Edition</p>
+    <div class="sys">USER: <span>MICHAEL</span><br>STATUS: <span>ONLINE</span><br>FILES DETECTED: <span>04</span></div>
+  </header>
+  <div class="grid" id="grid">
+    <button class="file" data-open="box" aria-label="Open BROWN_MYSTERY_BOX.zip">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 20 32 8l24 12v26L32 58 8 46z" fill="#8a5d3b"/><path d="M8 20l24 12 24-12" fill="none" stroke="#2b1e17" stroke-width="2"/><path d="M32 32v26" stroke="#2b1e17" stroke-width="2"/><path d="M8 20 32 8l24 12-24 12z" fill="#a67a54"/><path d="M26 14l24 12" stroke="#6b4a35" stroke-width="5"/><path d="M32 32v26L8 46V20z" fill="#74482c"/></svg>
+      <span class="n">BROWN_MYSTERY_BOX.zip</span>
+    </button>
+    <button class="file" data-open="slash" aria-label="Open SLASH.txt">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6h27l11 11v41H14z" fill="#151211" stroke="#7a1830" stroke-width="2"/><path d="M41 6v11h11" fill="none" stroke="#7a1830" stroke-width="2"/><path d="M22 30h22M22 38h22M22 46h12" stroke="#4a3a34" stroke-width="2"/></svg>
+      <span class="n">SLASH.txt</span>
+    </button>
+    <button class="file" data-open="list" aria-label="Open 25_THINGS_I_LOVE_ABOUT_YOU.txt">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6h27l11 11v41H14z" fill="#151211" stroke="#7a1830" stroke-width="2"/><path d="M41 6v11h11" fill="none" stroke="#7a1830" stroke-width="2"/><path d="M22 28h22M22 35h22M22 42h22M22 49h14" stroke="#4a3a34" stroke-width="2"/></svg>
+      <span class="n">25_THINGS_I_LOVE_ABOUT_YOU.txt</span>
+    </button>
+    <button class="file" data-open="final" aria-label="Open FINAL_MESSAGE.txt">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M14 6h27l11 11v41H14z" fill="#2a0d16" stroke="#a82a4d" stroke-width="2"/><path d="M41 6v11h11" fill="none" stroke="#a82a4d" stroke-width="2"/><path d="M22 30h22M22 38h22M22 46h12" stroke="#a82a4d" stroke-width="2"/></svg>
+      <span class="n">FINAL_MESSAGE.txt</span>
+    </button>
+  </div>
+</main>
+
+<!-- ========== FILE 01 : BROWN_MYSTERY_BOX.zip ========== -->
+<main class="view" id="v-box">
+  <div class="titlebar"><button class="back" data-back>← BACK</button><span class="fname">BROWN_MYSTERY_BOX.zip</span></div>
+  <div class="pane">
+    <div class="log" id="box-log"></div>
+    <div class="bar" id="box-bar"><i></i></div>
+    <figure class="hidden" id="box-reveal" style="width:100%;display:none;flex-direction:column;align-items:center">
+      <div class="frame" id="photo-frame"></div>
+      <figcaption class="found">You found me.</figcaption>
+    </figure>
+  </div>
+</main>
+
+<!-- ========== FILE 02 : SLASH.txt ========== -->
+<main class="view" id="v-slash">
+  <div class="titlebar"><button class="back" data-back>← BACK</button><span class="fname">SLASH.txt</span></div>
+  <div class="pane"><p class="meow" id="meow"></p></div>
+</main>
+
+<!-- ========== FILE 03 : 25_THINGS_I_LOVE_ABOUT_YOU.txt ========== -->
+<main class="view" id="v-list">
+  <div class="titlebar"><button class="back" data-back>← BACK</button><span class="fname">25_THINGS_I_LOVE_ABOUT_YOU.txt</span></div>
+  <div class="pane">
+    <ol class="list" id="list"></ol>
+  </div>
+</main>
+
+<!-- ========== FILE 04 : FINAL_MESSAGE.txt ========== -->
+<main class="view" id="v-final">
+  <div class="titlebar"><button class="back" data-back>← BACK</button><span class="fname">FINAL_MESSAGE.txt</span></div>
+  <div class="pane">
+    <div id="final-log"></div>
+    <div class="letter hidden" id="letter"></div>
+    <div class="sign" id="sign"></div>
+    <div class="close" id="closing"></div>
+  </div>
+</main>
+
+<script>
+/* =====================================================================
+   EDIT HERE  ·  the three things you need to replace
+   ===================================================================== */
+
+/* 1) YOUR PHOTO ──────────────────────────────────────────────────────
+   Put your image file next to index.html (e.g. photo.jpg) and set:
+     const PHOTO_SRC = "photo.jpg";
+   While this is empty, a placeholder labelled YOUR_PHOTO_HERE is shown. */
+const PHOTO_SRC = "";   // <-- YOUR_PHOTO_HERE
+
+/* 2) THE 25 THINGS ───────────────────────────────────────────────────
+   Replace each "[PLACEHOLDER]" with your own text. Keep exactly 25. */
+const THINGS = [
+  "Your sense of humor you somehow always know how to make me laugh with your adorable jokes.",
+  "How silly you are. I love that you never feel like you have to be serious all the time.",
+  "How generous you are. You give so naturally, without making it feel like I owe you anything.",
+  "How affectionate you are. I love that you’re never embarrassed to show that you care.",
+  "How gentle you are with the people you love.",
+  "How giving you are with your time, not just with things.",
+  "How much you genuinely like helping people. You don’t just say you want to help—you actually do it.",
+  "Your humility. You have so many things you could be arrogant about, and somehow you still remain so grounded.",
+  "How capable you are. I love watching you figure things out instead of immediately giving up.",
+  "Your work ethic. When you care about something, you actually put the work in.",
+  "The fact that you don’t give up easily. Even when something gets frustrating, you keep trying.",
+  "How curious you are. I love how easily you can get genuinely interested in something and disappear to read almost everything about it.",
+  "How passionate you get when you talk about the things you love.",
+  "How unapologetically yourself you are. You don’t constantly try to make yourself smaller or more “acceptable” you’re a proud strange critter.",
+  "How open your heart is. You’re not afraid of being vulnerable or letting people know you care.",
+  "How shamelessly affectionate you can be and I find it ridiculously endearing.",
+  "The way you care for animals. Especially how soft you are with cats.",
+  "How much you value your friendships. I love seeing how much Dylan means to you and how genuinely you appreciate him.",
+  "How loyal you are to the people you love.",
+  "The way you remember little things. Even things you probably don’t realize I notice that you remember.",
+  "How you can be both incredibly intelligent and incredibly unserious at the same time. It’s one of my favorite combinations about you.",
+  "How comfortable you make people feel around you.",
+  "The way you make me feel included in your life. Even from far away, you make me feel like I’m actually there with you.",
+  "How much you care about becoming better at what you do. You’re not satisfied with simply being capable you want to keep improving.",
+  "The person you are underneath everything else. All the things I love about you ultimately come down to the fact that you’re just… you. And I wouldn’t want you any other way."
+];
+
+/* 3) FINAL MESSAGE ───────────────────────────────────────────────────
+   One string per paragraph. Add as many as you like. */
+const FINAL_MESSAGE = [
+  "Michael,",
+  "It’s so hard to describe this in a way that feels honest without feeling like I’m leaving half of it out.",
+  "Sometimes I look at you and my mind genuinely feels a little overwhelmed by how much I love you. And believe me, not in some perfect, imaginary way either. I mean YOU exactly as you are. Your silly side, your stubbornness that can be frustrating, your ridiculous jokes, your endless ambitions, your flaws, your softness, the way you care, the way you work, the way you love. You are my dream man, but in the most realistic sense of the word. You’re not someone I dreamed up and then found in you, but someone who made me realize that the kind of person I always wanted could actually exist.",
+  "And somehow, there’s also this strange feeling that I’ve known you for much longer than I actually have. Like something about you has always been familiar to me. Like if I had imagined the person I would one day feel safest with, it would have been you, without me even knowing your name yet.",
+  "There’s actually a lyric from honeybee that always makes me think of you, the part about looking at someone’s face and feeling like you could spend your whole life knowing it. And I think that’s exactly how I feel about you. I don’t just want to know you as you are right now. I want to know every version of you that comes after this one too. I want to watch you grow, change, become more yourself, and somehow still feel like I’m meeting you for the first time every time.",
+  "You are my hero in a very real, unglamorous way. And no, I don’t think that you can save me from everything. It’s because you make me feel like I don’t have to face everything alone. You’re my support, my safe place, the person I want beside me when life is wonderful and when it’s completely unbearable. I admire the way you keep going, the way you work for what you want, and the way you still manage to be gentle despite everything life asks of you.",
+  "And there’s something I have to admit that still makes me laugh a little.",
+  "You know, I’m an atheist. I don’t believe in divine plans or fate, or that people are placed in our lives for some predetermined reason.",
+  "And yet, when I think about you sometimes, I have genuinely wondered for a moment if somehow, impossibly, you were one.",
+  "And of course, I don’t suddenly believe in God. But I still think finding you has felt almost too perfectly unlikely.",
+  "Out of all the people in the world, and all the women who could treat you right hehe, somehow I found you. And somehow you became the person I love this deeply. The person whose happiness matters to me. The person I want to celebrate, annoy, support, laugh with, and grow alongside :).",
+  "I don’t know what the universe has planned for either of us, and I don’t need to know.",
+  "I just know that I’m incredibly grateful that you’re here."
+];
+const SIGN_OFF = "Happy birthday, Mikey.";
+const CLOSING_LINES = [   // <-- lines under the sign-off; use [] to hide
+  "I love you more than I know how to explain. Even after trying to put it all into words, I still feel like I’ve barely scratched the surface.",
+  "Here’s to another year of you being you and me being ridiculously lucky that I get to love you."
+];
+
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let run = 0; // cancels running sequences when the view changes
+
+async function type(el, text, speed, tok){
+  if(reduce){ el.textContent += text; return; }
+  for(const ch of text){ if(tok !== run) return; el.textContent += ch; await sleep(speed); }
+}
+
+function show(id){
+  const tok = ++run;
+  document.querySelectorAll(".view.active").forEach(v => { v.classList.remove("show","active"); });
+  const v = $("#v-" + id);
+  v.classList.add("active");
+  window.scrollTo(0,0);
+  requestAnimationFrame(() => requestAnimationFrame(() => v.classList.add("show")));
+  ({boot, archive, box, slash, list, final})[id]?.(tok);
+}
+
+/* ---------- boot ---------- */
+async function boot(tok){
+  const out = $("#boot-out"), btn = $("#enter");
+  out.innerHTML = ""; btn.classList.add("hidden");
+  const l = document.createElement("div"); l.className = "log cursor"; out.appendChild(l);
+  await type(l, "INITIALIZING...", 38, tok); await sleep(450); if(tok !== run) return;
+  out.innerHTML = `
+    <div class="boot-title fade-in">MICHAEL<b>.EXE</b></div>
+    <div class="boot-sub fade-in" style="animation-delay:.3s">BIRTHDAY EDITION</div>
+    <div class="log fade-in" style="animation-delay:.7s;margin-top:14px">SYSTEM STATUS: ONLINE</div>
+    <div class="ok fade-in" style="animation-delay:1.2s">ACCESS GRANTED</div>`;
+  await sleep(reduce ? 0 : 1700); if(tok !== run) return;
+  btn.classList.remove("hidden"); btn.classList.add("fade-in"); btn.focus({preventScroll:true});
+}
+$("#enter").addEventListener("click", () => show("archive"));
+
+/* ---------- archive ---------- */
+function archive(){
+  const g = $("#grid"); g.classList.remove("enter"); void g.offsetWidth; g.classList.add("enter");
+}
+document.querySelectorAll("[data-open]").forEach(b => b.addEventListener("click", () => show(b.dataset.open)));
+document.querySelectorAll("[data-back]").forEach(b => b.addEventListener("click", () => show("archive")));
+
+/* ---------- file 01 ---------- */
+async function box(tok){
+  const log = $("#box-log"), bar = $("#box-bar"), fill = bar.firstElementChild, fig = $("#box-reveal");
+  log.textContent = ""; log.className = "log cursor"; fig.style.display = "none"; fig.classList.remove("fade-in");
+  bar.style.display = ""; fill.style.transition = "none"; fill.style.width = "0";
+  // photo (see PHOTO_SRC above)
+  const frame = $("#photo-frame");
+  frame.innerHTML = PHOTO_SRC
+    ? `<img src="${PHOTO_SRC}" alt="Photograph" onerror="this.parentNode.innerHTML='<div class=ph>YOUR_PHOTO_HERE</div>'">`
+    : `<div class="ph">YOUR_PHOTO_HERE</div>`;
+  await type(log, "EXTRACTING FILE...", 34, tok); if(tok !== run) return;
+  fill.style.transition = ""; fill.style.width = "100%";
+  await sleep(reduce ? 0 : 1400); if(tok !== run) return;
+  log.textContent = ""; await type(log, "1 FILE FOUND", 38, tok); await sleep(650); if(tok !== run) return;
+  bar.style.display = "none"; log.className = "log";
+  fig.style.display = "flex"; fig.classList.add("fade-in");
+}
+
+/* ---------- file 02 ---------- */
+async function slash(tok){
+  const m = $("#meow"); m.textContent = ""; m.className = "meow cursor";
+  await sleep(500); await type(m, "Meow.", 110, tok);
+}
+
+/* ---------- file 03 ---------- */
+let listBuilt = false, io;
+function list(){
+  const ol = $("#list");
+  if(!listBuilt){
+    THINGS.forEach((t,i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="num">${String(i+1).padStart(2,"0")}.</span><span class="txt"></span>`;
+      li.querySelector(".txt").textContent = t;
+      ol.appendChild(li);
+    });
+    listBuilt = true;
+  }
+  io?.disconnect();
+  io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } }), {threshold:.35});
+  ol.querySelectorAll("li").forEach(li => { li.classList.remove("in"); io.observe(li); });
+}
+
+/* ---------- file 04 ---------- */
+async function final(tok){
+  const log = $("#final-log"), letter = $("#letter"), sign = $("#sign"), close = $("#closing");
+  log.innerHTML = ""; letter.classList.add("hidden"); letter.innerHTML = "";
+  sign.className = "sign"; close.className = "close"; sign.textContent = ""; close.textContent = "";
+  const a = document.createElement("div"), b = document.createElement("div");
+  a.className = "log"; b.className = "log cursor"; log.append(a, b);
+  await type(a, "FILE STATUS: FINAL", 34, tok); await sleep(300);
+  await type(b, "ACCESSING...", 60, tok); await sleep(reduce ? 0 : 900); if(tok !== run) return;
+  log.innerHTML = "";
+  FINAL_MESSAGE.forEach(t => { const p = document.createElement("p"); p.textContent = t; letter.appendChild(p); });
+  letter.classList.remove("hidden");
+  sign.textContent = SIGN_OFF;
+  CLOSING_LINES.forEach(t => { const d = document.createElement("div"); d.textContent = t; d.style.marginTop = ".8em"; close.appendChild(d); });
+  // paragraphs, sign-off and closing lines fade in as they scroll into view
+  final.io?.disconnect();
+  final.io = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add("in"); final.io.unobserve(e.target); } }), {threshold:.25});
+  [...letter.children, sign, close].forEach(el => final.io.observe(el));
+}
+
+show("boot");
+</script>
+</body>
+</html>
